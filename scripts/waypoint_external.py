@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-
 import rospy
 import mavros
 import sensor_msgs
 import yaml
-#from mavros.msg import *
 from mavros_msgs.msg import *
 from mavros_msgs.srv import *
 from std_msgs.msg import String
@@ -18,14 +16,12 @@ last_waypoint = False
 
 def waypoint_callback(data):
 	global last_waypoint
-	#print("\n----------\nwaypoint_callback")
 	rospy.loginfo("Received waypoint: %s", data)
 	if len(data.waypoints) != 0:							#if waypoint list is not empty
 		rospy.loginfo("is_current: %s", data.waypoints[len(data.waypoints)-1].is_current)
 		last_waypoint = data.waypoints[len(data.waypoints)-1].is_current	#checks status of "is_current" for last waypoint
 
 def globalPosition_callback(data):
-	#print("\n----------\nglobalPosition_callback")
 	global latitude
 	global longitude
 	global altitude
@@ -95,7 +91,7 @@ def pushWayPoint():
 	]
 	try:
 		pushWayPointService = rospy.ServiceProxy('/mavros/mission/push', WaypointPush)
-		resp = pushWayPointService(waypoints)
+		resp = pushWayPointService(start_index=0, waypoints=waypoints)
 		print resp
 	except rospy.ServiceException, e:
 		print "Service Push Way Point call failed: %s . GUIDED mode not set"%e
@@ -134,13 +130,8 @@ def main():
 	print("EVERYTHING WORKED AS PLANNED!!!")
 	rospy.spin()
 
-def temp():
-	rospy.init_node('tempNode')
-	setMode('GUIDED')
-	setArm()
-	setTakeOff(5)
-	rospy.spin()
-
 if __name__ == '__main__':
-	# main()
-	temp()
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
