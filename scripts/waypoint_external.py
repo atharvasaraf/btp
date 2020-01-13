@@ -33,32 +33,23 @@ def globalPosition_callback(data):
 	longitude = data.longitude
 	altitude = data.altitude
 
-def setTakeOff():
+def setTakeOff(commanded_altitude):
 	rospy.wait_for_service('/mavros/cmd/takeoff')
-	rospy.loginfo("Attempting Takeoff")
+	rospy.loginfo("Attempting Takeoff to altitude: [%s m]"%commanded_altitude)
 	try:
 		takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', mavros_msgs.srv.CommandTOL)
-		takeoffService(altitude = 2.0, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
+		takeoffService(altitude = commanded_altitude, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
 	except rospy.ServiceException, e:
 		print "Service Takeoff call failed: %s"%e
 
 def setMode(requested_mode):
 	rospy.wait_for_service('/mavros/set_mode')
-	rospy.loginfo("Attempting to set mode to: GUIDED")
+	rospy.loginfo("Attempting to set mode to: %s"%requested_mode)
 	try:
 		flightModeService = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
 		isModeChanged = flightModeService(custom_mode=requested_mode)
 	except rospy.ServiceException, e:
 		print "Service set_mode call failed: %s . Requested mode not set"%e
-
-def setGuidedMode():
-	rospy.wait_for_service('/mavros/set_mode')
-	rospy.loginfo("Attempting to set mode to: GUIDED")
-	try:
-		flightModeService = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
-		isModeChanged = flightModeService(custom_mode='GUIDED')
-	except rospy.ServiceException, e:
-		print "Service set_mode call failed: %s . GUIDED mode not set"%e
 
 def setArm():
 	rospy.wait_for_service('/mavros/cmd/arming')
@@ -114,8 +105,6 @@ def main():
 	rospy.Subscriber("/mavros/mission/waypoints", WaypointList, waypoint_callback)
 	rospy.Subscriber("/mavros/global_position/raw/fix", NavSatFix, globalPosition_callback)
 
-	# setGuidedMode()
-
 	#Clearing waypoints
 	clearWayPoint()
 	rospy.sleep(5)
@@ -125,7 +114,7 @@ def main():
 	rospy.sleep(5)
 
 	# Arming
-	# setArm()
+	setArm()
 
 	#Sending waypoints_push
 	pushWayPoint()
@@ -147,8 +136,9 @@ def main():
 
 def temp():
 	rospy.init_node('tempNode')
-	clearWayPoint()
 	setMode('GUIDED')
+	setArm()
+	setTakeOff(5)
 	rospy.spin()
 
 if __name__ == '__main__':
