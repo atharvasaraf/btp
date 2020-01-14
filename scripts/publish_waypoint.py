@@ -15,8 +15,8 @@ class mission_sitl:
 		self.altitude = 0.0
 		self.last_waypoint = False
 		
-		rospy.Subscriber("/mavros/mission/waypoints", WaypointList, waypoint_callback)
-		rospy.Subscriber("/mavros/global_position/raw/fix", NavSatFix, globalPosition_callback)
+		rospy.Subscriber("/mavros/mission/waypoints", WaypointList, self.waypoint_callback)
+		rospy.Subscriber("/mavros/global_position/raw/fix", NavSatFix, self.globalPosition_callback)
 
 		self.clearWayPoint()
 		rospy.sleep(5)
@@ -24,13 +24,17 @@ class mission_sitl:
 		self.pullWayPoint()
 		rospy.sleep(5)
 
+		self.pushWayPoint()
+
 		self.setMode('GUIDED')
 
-		# Do we arm here?
-		# self.setArm()
+		self.setArm()
 
-		self.pushWayPoint()
+		self.setTakeOff(10)
 		rospy.sleep(5)
+
+		self.setMode('AUTO')
+
 		while True:						#waits for last_waypoint in previous WaypointList to be visited
 			rospy.sleep(2)
 			print("WAITING for last_waypoint == True")
@@ -39,6 +43,7 @@ class mission_sitl:
 					rospy.sleep(2)
 					print("WAITING for last_waypoint == False")
 					if self.last_waypoint == False:	#if last_waypoint has been visited (due to previous constraint)
+						self.setMode('RTL')
 						break
 				break
 
@@ -77,10 +82,10 @@ class mission_sitl:
 
 	def setMode(self, requested_mode):
 		rospy.wait_for_service('/mavros/set_mode')
-		rospy.loginfo("Attempting to set mode to: %s"%self.requested_mode)
+		rospy.loginfo("Attempting to set mode to: %s"%requested_mode)
 		try:
 			flightModeService = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
-			isModeChanged = flightModeService(custom_mode=self.requested_mode)
+			isModeChanged = flightModeService(custom_mode=requested_mode)
 		except rospy.ServiceException, e:
 			print "Service set_mode call failed: %s . Requested mode not set"%e
 
@@ -96,15 +101,15 @@ class mission_sitl:
 	def pushWayPoint(self):
 		rospy.wait_for_service('/mavros/mission/push')
 		rospy.loginfo("Attempting to Push Waypoint")
-		self.waypoints = [
-			Waypoint(frame = 3, command = 22, is_current =  True, autocontinue = True, param1 = 5, x_lat = 37.197718, y_long = -80.580626, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197700, y_long = -80.580638, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197590, y_long = -80.580301, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197794, y_long = -80.580285, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197842, y_long = -80.580127, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197872, y_long = -80.580083, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197696, y_long = -80.580072, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = 37.197554, y_long = -80.580061, z_alt = 10)
+			self.waypoints = [
+			Waypoint(frame = 3, command = 22, is_current =  True, autocontinue = True, param1 = 5, x_lat = -35.3632538, y_long = 149.1652414, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632638, y_long = 149.1652514, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632738, y_long = 149.1652614, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632838, y_long = 149.1652714, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632938, y_long = 149.1652814, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3633038, y_long = 149.1652914, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3633138, y_long = 149.1653014, z_alt = 10),
+			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3633238, y_long = 149.1653114, z_alt = 10)
 		]
 		try:
 			pushWayPointService = rospy.ServiceProxy('/mavros/mission/push', WaypointPush)
@@ -113,6 +118,14 @@ class mission_sitl:
 		except rospy.ServiceException, e:
 			print "Service Push Way Point call failed: %s . GUIDED mode not set"%e
 
+	def setTakeOff(self, commanded_altitude):
+		rospy.wait_for_service('/mavros/cmd/takeoff')
+		rospy.loginfo("Attempting Takeoff to altitude: [%sm]"%commanded_altitude)
+		try:
+			takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', mavros_msgs.srv.CommandTOL)
+			takeoffService(altitude = commanded_altitude, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
+		except rospy.ServiceException, e:
+			print "Service Takeoff call failed: %s"%e
 
 def main():
 	rospy.init_node('wayPointPublisher_node')
