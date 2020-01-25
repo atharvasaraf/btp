@@ -17,23 +17,20 @@ class mission_sitl:
 		
 		rospy.Subscriber("/mavros/mission/waypoints", WaypointList, self.waypoint_callback)
 		rospy.Subscriber("/mavros/global_position/raw/fix", NavSatFix, self.globalPosition_callback)
-
+	
 		self.clearWayPoint()
-		rospy.sleep(5)
+		rospy.sleep(1)
 
 		self.pullWayPoint()
-		rospy.sleep(5)
-
-		self.pushWayPoint()
+		rospy.sleep(1)
 
 		self.setMode('GUIDED')
-
+		self.pushWayPoint()
 		self.setArm()
-
 		self.setTakeOff(10)
 		rospy.sleep(5)
 
-		self.setMode('AUTO')
+		# self.setMode('AUTO')
 
 		while True:						#waits for last_waypoint in previous WaypointList to be visited
 			rospy.sleep(2)
@@ -43,7 +40,7 @@ class mission_sitl:
 					rospy.sleep(2)
 					print("WAITING for last_waypoint == False")
 					if self.last_waypoint == False:	#if last_waypoint has been visited (due to previous constraint)
-						self.setMode('RTL')
+						# self.setMode('RTL')
 						break
 				break
 
@@ -101,16 +98,24 @@ class mission_sitl:
 	def pushWayPoint(self):
 		rospy.wait_for_service('/mavros/mission/push')
 		rospy.loginfo("Attempting to Push Waypoint")
-			self.waypoints = [
-			Waypoint(frame = 3, command = 22, is_current =  True, autocontinue = True, param1 = 5, x_lat = -35.3632538, y_long = 149.1652414, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632638, y_long = 149.1652514, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632738, y_long = 149.1652614, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632838, y_long = 149.1652714, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3632938, y_long = 149.1652814, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3633038, y_long = 149.1652914, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3633138, y_long = 149.1653014, z_alt = 10),
-			Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 5, x_lat = -35.3633238, y_long = 149.1653114, z_alt = 10)
+		self.waypoints = [
+		Waypoint(frame = 3, command = 16, is_current = True, autocontinue = True, param1 = 0, param2 = 0, param3 = 0, x_lat = -35.3632538, y_long = 149.1652414, z_alt = 10),
+		Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 0, param2 = 0, param3 = 0, x_lat = -35.3632738, y_long = 149.1652414, z_alt = 10),
+		Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 0, param2 = 0, param3 = 0, x_lat = -35.3632838, y_long = 149.1652414, z_alt = 10),
+		Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, param1 = 0, param2 = 0, param3 = 0, x_lat = -35.3633038, y_long = 149.1652414, z_alt = 10)
 		]
+		# self.waypoints = [
+		# 	#WAYPOINTS 1 & 2 are the same!
+		# 	# Waypoint(frame = 3, command = 16, is_current =  False, autocontinue = True, param1 = 5, x_lat = -35.3632538, y_long = 149.1652414, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current =  True, autocontinue = True, x_lat = -35.3632538, y_long = 149.1652414, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3632638, y_long = 149.1652514, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3632738, y_long = 149.1652614, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3632838, y_long = 149.1652714, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3632938, y_long = 149.1652814, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3633038, y_long = 149.1652914, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3633138, y_long = 149.1653014, z_alt = 10),
+		# 	Waypoint(frame = 3, command = 16, is_current = False, autocontinue = True, x_lat = -35.3633438, y_long = 149.1653414, z_alt = 10)
+		# ]
 		try:
 			pushWayPointService = rospy.ServiceProxy('/mavros/mission/push', WaypointPush)
 			resp = pushWayPointService(start_index=0, waypoints=self.waypoints)
