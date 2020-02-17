@@ -14,6 +14,7 @@ class HuMoment:
 		self.hu_Moments = np.empty([7, 1])
 		self.nrmld_Hu = np.empty([7, 1])
 		self.sub_image = Image
+	
 	def getHSVmask(self):
 		self.hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
 		self.mask = cv2.inRange(self.hsv, self.HSV_min, self.HSV_max)
@@ -39,8 +40,10 @@ class HuMoment:
 		for i in range(len(self.hu_Moments)):
 			print "[H_%s]"%i," = %s"%self.nrmld_Hu[i]
 
-	def sub_callback(self, data):
-		self.sub_image = data
+	def sub_callback(self, ros_data):
+		np_arr = np.fromstring(ros_data.data, np.uint8).reshape(ros_data.height, ros_data.width, 3)
+		raw = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+		self.sub_image = np_arr
 
 	def sourceImage(self, topic='default'):
 		if topic == 'default':
@@ -49,6 +52,7 @@ class HuMoment:
 			self.image = self.sub_image
 
 	def fetchAndUpdate(self):
+		rospy.sleep(2)
 		self.sourceImage('ROS')
 		self.getHSVmask()
 		self.getHuMoments()
@@ -59,6 +63,7 @@ def main():
 	rospy.init_node('huMoment_node')
 	HuNode = HuMoment()
 	HuNode.fetchAndUpdate()
+	rospy.spin()
 
 if __name__ == '__main__':
 	try:
