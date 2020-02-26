@@ -22,8 +22,8 @@ Publications:
 
 SERVICES:
 Advertised:
-/snap_image - Generate HuMoments
-/tank - Save Surface raw data in .npy file
+/snap_image - Generate HuMoments and store Moments & Position
+
 
 """
 
@@ -33,7 +33,6 @@ import rospy
 import numpy as np
 import sensor_msgs
 from btp.srv import snap
-from btp.srv import cherry
 from math import copysign, log10
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped
@@ -52,7 +51,6 @@ class HuMoment:
 		self.pose_subscriber = rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.pose_callback)
 		self.image_subscriber = rospy.Subscriber("/iris/tiltCam/image_raw/imagestream", Image, self.img_callback)
 		self.snap_service = rospy.Service('snap_image', snap, self.snap_image)
-		self.save_service = rospy.Service('save_data', cherry,self.saveSurfaceData)
 
 		rospy.loginfo("Initialized Hu Moment Node... \n Subscribing to Image and Drone Position Topics \n Advertising Service: snap_image")
 		# self.HSV_min = np.array([0, 5, 229])
@@ -64,7 +62,7 @@ class HuMoment:
 		self.nrmld_Hu = np.empty([7, 1])
 		self.sub_image = Image
 		self.current_pose = np.empty([3, 1])
-		self.surface_data = [0]
+		self.surface_data = 0
 		self.flag = True
 
 	def snap_image(self, resp):
@@ -80,7 +78,7 @@ class HuMoment:
 			cv2.imwrite('/home/fatguru/catkin_ws/src/btp/b.jpg', pop)
 
 		elif resp.action == 1:
-			self.sourceImage('ROS')
+			self.sourceImage('default')
 			self.getHSVmask()
 			self.getHuMoments()
 			self.current_pose = np.zeros([3, 1])
@@ -89,10 +87,13 @@ class HuMoment:
 			if self.flag == True:
 				self.surface_data = position_data
 				self.flag = False
+				print self.surface_data
 			else:
 				self.surface_data = np.append(self.surface_data, position_data, axis = 0)
-		
-		self.saveSurfaceData()
+				print self.surface_data
+
+		print "Was here!"
+		print self.saveSurfaceData()
 		return 1
 
 	def getHSVmask(self):
@@ -164,9 +165,6 @@ class HuMoment:
 		"""
 		Callback for local drone position topic
 		Stores pose in private data structure
-		TODO:
-			Origin of reference frame of data is Home of Drone
-			Need to modify so that position is wrt Landing Marker, whose position is defined in temp.world 
 		"""
 		self.current_pose[0] = data.pose.position.x
 		self.current_pose[1] = data.pose.position.y
@@ -192,18 +190,16 @@ class HuMoment:
 		self.printHuMoments()
 		self.showMask()
 
-	def saveSurfaceData(self, task):
+	def saveSurfaceData(self):
 		"""
 		Method to store obtained data for surface generation
 		TODO:
 			Integrate method into a service (maybe using a wrapper)
 		"""
+		print "Saving data!"
 		filename = time.strftime("%Y%m%d-%H%M%S")
 		filepath = '/home/fatguru/catkin_ws/src/btp/data/' + filename
-		rospy.loginfo("Saving surface data file to Path:%s"%filepath)
 		np.savetxt(filepath, self.surface_data, delimiter=',')
-
-		return "Data saved!"
 
 def main():
 	HuNode = HuMoment()
