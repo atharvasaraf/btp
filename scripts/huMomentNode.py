@@ -23,7 +23,7 @@ Publications:
 SERVICES:
 Advertised:
 /snap_image - Generate HuMoments
-/tank - Save Surface raw data in .npy file
+/cherry - Save Surface raw data in .npy file
 
 """
 
@@ -52,7 +52,7 @@ class HuMoment:
 		self.pose_subscriber = rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.pose_callback)
 		self.image_subscriber = rospy.Subscriber("/iris/tiltCam/image_raw/imagestream", Image, self.img_callback)
 		self.snap_service = rospy.Service('snap_image', snap, self.snap_image)
-		self.save_service = rospy.Service('save_data', cherry,self.saveSurfaceData)
+		self.save_service = rospy.Service('save_data', cherry, self.saveSurfaceData)
 
 		rospy.loginfo("Initialized Hu Moment Node... \n Subscribing to Image and Drone Position Topics \n Advertising Service: snap_image")
 		# self.HSV_min = np.array([0, 5, 229])
@@ -72,6 +72,7 @@ class HuMoment:
 		Callback for /snap_image Service
 
 		"""
+		rospy.loginfo("Snap Service callback")
 		if resp.action == 0:
 			pop = cv2.cvtColor(self.sub_image, cv2.COLOR_RGB2BGR)
 			cv2.imshow('image', pop)
@@ -85,14 +86,13 @@ class HuMoment:
 			self.getHuMoments()
 			self.current_pose = np.zeros([3, 1])
 			position_data = np.append(self.current_pose, self.hu_Moments).reshape((1, 10))
-			
+
 			if self.flag == True:
 				self.surface_data = position_data
 				self.flag = False
 			else:
 				self.surface_data = np.append(self.surface_data, position_data, axis = 0)
-		
-		self.saveSurfaceData()
+
 		return 1
 
 	def getHSVmask(self):
