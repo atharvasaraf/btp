@@ -31,7 +31,7 @@ Called:
 mavros/cmd/arming Arm UAV
 mavros/cmd/takeoff Takeoff UAV
 /snap_image Generate Hu Moments from current location and stack data
-/cherry Save generated data of hu moments and corresponding positions
+/save_data Save generated data of hu moments and corresponding positions
 
 """
 
@@ -159,7 +159,7 @@ class mission_sitl:
 
 	def saveData(self):
 		"""
-		Process current camera feed to obtain hu_moments 
+		Save all generated data
 		"""
 		rospy.wait_for_service('/save_data')
 		rospy.loginfo("Saving all generated data")
