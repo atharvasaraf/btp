@@ -61,15 +61,34 @@ class mission_sitl:
 		rospy.init_node('wayPointPublisher_node')
 		self.setpoint_publisher = rospy.Publisher("/mavros/setpoint_position/local", PoseStamped, queue_size=10)
 		rospy.sleep(1)
+		# self.setpoint_list = [
+		# [5.00, 0.0, 10.0],
+		# [10.0, 0.0, 10.0],
+		# [15.0, 0.0, 10.0],
+		# [20.0, 0.0, 10.0],
+		# [20.0, 0.0, 20.0],
+		# [15.0, 0.0, 20.0],
+		# [10.0, 0.0, 20.0],
+		# [5.00, 0.0, 20.0],
+		# ]
 		self.setpoint_list = [
-		[5.00, 0.0, 10.0],
-		[10.0, 0.0, 10.0],
-		[15.0, 0.0, 10.0],
-		[20.0, 0.0, 10.0],
-		[20.0, 0.0, 20.0],
+		[3.00, 0.0, 10.0],
+		[6.0, 0.0, 10.0],
+		[9.0, 0.0, 10.0],
+		[12.0, 0.0, 10.0],
 		[15.0, 0.0, 20.0],
-		[10.0, 0.0, 20.0],
-		[5.00, 0.0, 20.0]
+		[18.0, 0.0, 20.0],
+		[21.0, 0.0, 20.0],
+		[24.00, 0.0, 20.0],
+
+		[24.0, 0.0, 10.0],
+		[21.0, 0.0, 10.0],
+		[18.0, 0.0, 10.0],
+		[15.0, 0.0, 10.0],
+		[12.0, 0.0, 20.0],
+		[9.0, 0.0, 20.0],
+		[6.0, 0.0, 20.0],
+		[3.0, 0.0, 20.0],
 		]
 
 		self.setpoint = PoseStamped()
@@ -81,10 +100,10 @@ class mission_sitl:
 		self.setTakeOff(10)
 		rospy.sleep(15)
 		for i in range(len(self.setpoint_list)):
-			self.captureImage()
-			rospy.sleep(3)
 			self.update_setpoint(self.setpoint, i)
 			rospy.sleep(7)
+			self.captureImage()
+			rospy.sleep(3)
 
 		self.setMode('RTL')
 		self.saveData()

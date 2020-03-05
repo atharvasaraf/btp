@@ -84,7 +84,6 @@ class HuMoment:
 			self.sourceImage('ROS')
 			self.getHSVmask()
 			self.getHuMoments()
-			self.current_pose = np.zeros([3, 1])
 			position_data = np.append(self.current_pose, self.hu_Moments).reshape((1, 10))
 
 			if self.flag == True:
