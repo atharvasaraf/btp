@@ -26,7 +26,7 @@ Advertised:
 /cherry - Save Surface raw data in .npy file
 
 """
-
+import os
 import cv2
 import time
 import rospy
@@ -57,6 +57,9 @@ class HuMoment:
 		rospy.loginfo("Initialized Hu Moment Node... \n Subscribing to Image and Drone Position Topics \n Advertising Service: snap_image")
 		# self.HSV_min = np.array([0, 5, 229])
 		# self.HSV_max = np.array([179, 255, 255])
+		
+		self.makedirs()
+	
 		self.HSV_min = np.array([0, 128, 95])
 		self.HSV_max = np.array([179, 255, 136])
 		
@@ -66,6 +69,11 @@ class HuMoment:
 		self.current_pose = np.empty([3, 1])
 		self.surface_data = [0]
 		self.flag = True
+
+	def makedirs(self):
+		self.dirname = time.strftime("%Y%m%d-%H%M%S")	
+		os.mkdir('/home/fatguru/catkin_ws/src/btp/raw_data/mask/' +self.dirname)
+		os.mkdir('/home/fatguru/catkin_ws/src/btp/raw_data/image/'+self.dirname)
 
 	def snap_image(self, resp):
 		"""
@@ -83,6 +91,8 @@ class HuMoment:
 		elif resp.action == 1:
 			self.sourceImage('ROS')
 			self.getHSVmask()
+			self.saveImage(self.image)
+			self.saveMask(self.mask)
 			self.getHuMoments()
 			position_data = np.append(self.current_pose, self.hu_Moments).reshape((1, 10))
 
@@ -114,22 +124,26 @@ class HuMoment:
 			else:
 				self.nrmld_Hu[i] = 0
 
-	def saveMask(self):
+	def saveMask(self, data):
 		"""
 		Testing Function
 		Save binary image
 		Function is prolly redundant/Will be removed
 		"""
-		cv2.imwrite('/home/fatguru/Desktop/mask.jpg', self.mask)
+		name = time.strftime("%Y%m%d-%H%M%S")
+		complete_path = '/home/fatguru/catkin_ws/src/btp/raw_data/mask/' + self.dirname + '/' + name + '.jpg'
+		cv2.imwrite(complete_path, data)
 
-	def saveImage(self):
+	def saveImage(self, data):
 		"""
 		Testing Function
 		Save captured Image
 		Function is prolly redundant/Will be removed
 		"""
-		temp = cv2.cvtColor(self.sub_image, cv2.COLOR_BGR2RGB)
-		cv2.imwrite('/home/fatguru/Desktop/image.jpg', temp)
+		data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+		name = time.strftime("%Y%m%d-%H%M%S")
+		complete_path = '/home/fatguru/catkin_ws/src/btp/raw_data/image/' + self.dirname + '/' + name + '.jpg'
+		cv2.imwrite(complete_path, data)
 
 	def showMask(self):
 		"""

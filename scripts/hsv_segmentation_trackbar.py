@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import cv2
 import numpy as np
 
@@ -28,7 +28,7 @@ def test():
 	while(True):
 	    # grab the frame
 	    # ret, frame = cap.read()
-	    frame = cv2.imread('/home/fatguru/catkin_ws/src/btp/a.jpg')
+	    frame = cv2.imread('/home/fatguru/catkin_ws/src/btp/raw_data/image/20200309-212349/20200309-212914.jpg')
 	    # get trackbar positions
 	    ilowH = cv2.getTrackbarPos('lowH', 'image')
 	    ihighH = cv2.getTrackbarPos('highH', 'image')

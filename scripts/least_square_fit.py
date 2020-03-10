@@ -39,15 +39,33 @@ class fitData:
 		x0_x1 = self.x0 * self.x1
 		# Normalize matrices if required
 		self.augX = np.hstack((self.x0, self.x1, x0_square, x1_square, x0_x1, np.ones((np.shape(self.x0)[0],1))))
-		norm = np.linalg.norm(self.hu1)
-		
-		# if norm != 0:
-		# 	self.hu1 =  self.hu1 / norm
-
+		# self.normalizehu()
 		self.augY = np.hstack((self.hu1, self.hu2, self.hu3, self.hu4))
+	
+	def normalizehu(self):
+		i = self.hu1
+		norm = np.linalg.norm(i)	
+		if norm != 0:
+			self.hu1 =  self.hu1 / norm
+
+		i = self.hu2
+		norm = np.linalg.norm(i)	
+		if norm != 0:
+			self.hu2 =  self.hu2 / norm
+
+		i = self.hu3
+		norm = np.linalg.norm(i)	
+		if norm != 0:
+			self.hu3 =  self.hu3 / norm
+
+		i = self.hu4
+		norm = np.linalg.norm(i)	
+		if norm != 0:
+			self.hu4 =  self.hu4 / norm
 
 	def loadData(self):
-		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200305-012336', delimiter=',')
+		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200310-113205', delimiter=',')
+		# self.raw_data = self.raw_data[0:7][:]
 		self.x_raw, self.y_raw, self.z_raw, self.hu1, self.hu2, self.hu3, self.hu4, self.hu5, self.hu6, self.hu7 = np.hsplit(self.raw_data, np.array([1,2,3,4,5,6,7,8,9]))
 	
 		#Add reference frame offset here
