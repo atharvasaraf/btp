@@ -1,0 +1,19 @@
+<launch>
+	<node name="single_waypoint" pkg="btp" type="single_waypoint.py"/>
+
+	<node name="huMomentNode" pkg="btp" type="huMomentNode.py"/>
+
+	<!-- <node name="gazebo" pkg="gazebo_ros" args="verbose /home/fatguru/ardupilot_gazebo/gazebo_worlds/temp.world" type="gazebo" /> -->
+
+	<include file="/home/fatguru/catkin_ws/src/mavros/mavros/launch/apm.launch" />
+
+	<include file="/home/fatguru/ardupilot/Tools/autotest/sim_vehicle.py">
+		<!-- <arg name="vehicle" value="ArduCopter" /> -->
+		<!-- <arg name="f" value="gazebo-iris" />
+		<arg name="m" value=""/>
+		<arg name="mav10" value=""/>
+		<arg name="console" value="" />
+		< arg name="I0" value="" /> -->
+		
+	</include>
+</launch>

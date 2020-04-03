@@ -64,7 +64,7 @@ class fitData:
 			self.hu4 =  self.hu4 / norm
 
 	def loadData(self):
-		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200310-113205', delimiter=',')
+		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200401-145823', delimiter=',')
 		# self.raw_data = self.raw_data[0:7][:]
 		self.x_raw, self.y_raw, self.z_raw, self.hu1, self.hu2, self.hu3, self.hu4, self.hu5, self.hu6, self.hu7 = np.hsplit(self.raw_data, np.array([1,2,3,4,5,6,7,8,9]))
 	
