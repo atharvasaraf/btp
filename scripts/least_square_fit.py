@@ -39,7 +39,7 @@ class fitData:
 		x0_x1 = self.x0 * self.x1
 		# Normalize matrices if required
 		self.augX = np.hstack((self.x0, self.x1, x0_square, x1_square, x0_x1, np.ones((np.shape(self.x0)[0],1))))
-		# self.normalizehu()
+		self.normalizehu()
 		self.augY = np.hstack((self.hu1, self.hu2, self.hu3, self.hu4))
 	
 	def normalizehu(self):
@@ -64,8 +64,8 @@ class fitData:
 			self.hu4 =  self.hu4 / norm
 
 	def loadData(self):
-		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200401-145823', delimiter=',')
-		# self.raw_data = self.raw_data[0:7][:]
+		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200427-170305', delimiter=',')
+		self.raw_data = self.raw_data[0:31][:]
 		self.x_raw, self.y_raw, self.z_raw, self.hu1, self.hu2, self.hu3, self.hu4, self.hu5, self.hu6, self.hu7 = np.hsplit(self.raw_data, np.array([1,2,3,4,5,6,7,8,9]))
 	
 		#Add reference frame offset here
@@ -77,7 +77,7 @@ class fitData:
 		return theta
 
 	def genPlot(self, theta):
-		step_size = 30
+		step_size = 20
 		x_temp = np.linspace(np.min(self.x0), np.max(self.x0), step_size).reshape(step_size, 1)
 		y_temp = np.linspace(np.min(self.x1), np.max(self.x1), step_size).reshape(step_size, 1)
 		foo = np.hstack((x_temp, y_temp, x_temp**2, y_temp**2, x_temp*y_temp, np.ones((step_size,1))))

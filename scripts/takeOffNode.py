@@ -11,7 +11,7 @@ class takeoff_demo:
 		rospy.sleep(2)
 		self.setMode('GUIDED')
 		self.setArm()
-		self.setTakeOff(5)
+		self.setTakeOff(15)
 		rospy.spinOnce()
 
 	def setMode(self, requested_mode):
