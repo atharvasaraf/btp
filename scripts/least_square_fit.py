@@ -4,6 +4,7 @@ The nomenclature pattern for the class objects, functions, and variables may not
 
 Least square fit for hu-moment data!
 """
+import time
 import numpy as np 
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
@@ -16,6 +17,7 @@ class fitData:
 		self.augmentData(self.x_raw, self.z_raw)
 		self.theta = self.simplefit(self.augX, self.augY)
 		self.genPlot(self.theta)
+		self.requestSaveData()
 		# self.testfit()
 
 	def testfit(self):
@@ -27,8 +29,8 @@ class fitData:
 		x1 = x1 + 0.35*error
 		self.augmentData(x0, x1)
 		self.augY = np.linspace(52, 70, 10).reshape((10,1))
-		th = self.simplefit(self.augX, self.augY)
-		self.genPlot(th)
+		self.theta = self.simplefit(self.augX, self.augY)
+		self.genPlot(self.theta)
 		print th
 
 	def augmentData(self, x0, x1):
@@ -65,7 +67,7 @@ class fitData:
 
 	def loadData(self):
 		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200427-170305', delimiter=',')
-		self.raw_data = self.raw_data[0:31][:]
+		self.raw_data = self.raw_data[0:31][:] # Latest data generated with self.raw_data[0:31][:]
 		self.x_raw, self.y_raw, self.z_raw, self.hu1, self.hu2, self.hu3, self.hu4, self.hu5, self.hu6, self.hu7 = np.hsplit(self.raw_data, np.array([1,2,3,4,5,6,7,8,9]))
 	
 		#Add reference frame offset here
@@ -109,6 +111,23 @@ class fitData:
 		ax.set_title('Hu4')
 		
 		plt.show()
+
+	def requestSaveData(self):
+		blip = raw_input("Please press Y to save generated least square fit surface Data:")
+		if blip == 'y':
+			self.saveData()
+		else:
+			print "Exiting"
+	def saveData(self):
+		"""
+		Method to save obtained Least-Square Fit Surface to below path
+		"""
+		filename = time.strftime("%Y%m%d-%H%M%S")
+		filepath = '/home/fatguru/catkin_ws/src/btp/learned_moments/' + filename
+		# rospy.loginfo("Saving surface data file to Path:%s"%filepath)
+		print "Saving surface data file to Path:%s"%filepath		
+		np.savetxt(filepath, self.theta, delimiter=',')
+		print "Data saved!"
 
 def main():
 	instance = fitData()
