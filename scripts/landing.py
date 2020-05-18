@@ -7,12 +7,17 @@ Tasks:
 1] Obtain learned Hu Moment from least square-fit surface
 2] Calculate the diameter of landing marker from dome -- Projected Diameter has been obtained
 3] Infer position of landing marker
+
+To do:
 4] Push landing command to drone
 
 Consider two diametrically opposite points of the landing marker: P1 & P2
-The two extremum points of the image of the landing marker are diametrically opposite
+The two extremum points of the image of the landing marker are diametrically opposite, because
+the longest line in the hemisphere is the diameter of the largest circle.
 This diameter is also parallel to the image plane and perpendicular to the principal axis of the camera lens
+
 We find the angle between the two lines (P1f and P2f), (where f is the focus) by finding all three sides of the triangle P1fP2
+Then using equation (17) from the paper we find the Absolute distance(z_Dome) of the Camera from landing marker
 
 """
 
@@ -28,6 +33,7 @@ from math import copysign, log10
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped
 
+# 60, 12
 class LandingModule:
 	def __init__(self):
 		"""
@@ -49,21 +55,31 @@ class LandingModule:
 		# f = (img_width / 2) / ( tan(deg2rad(h_fieldOfView) / 2) )
 		self.img_width = 640
 		self.img_height = 400
-		self.centreImageX = img_width / 2
-		self.centreImageY = img_height / 2
+		self.centreImageX = self.img_width / 2
+		self.centreImageY = self.img_height / 2
 		h_fov = 1.0472 #(In radians use np.deg2rad() to convert)
 		self.focal_length = (self.img_width / 2) / ( math.tan( h_fov / 2 ) ) 
 		
+		self.bufferLength = 4
+		self.HuMomentsFromImageBuffer = None
+		self.HuMomentsFromEquationBuffer = None
+
 		self.sourceImage()
+
 		self.getHSVmask()
 		self.getExtremePoints()
-		self.getDiameterImagePlane()
-		self.getDistanceExtremePoints()
 		self.getCentrePoint()
+		self.getDistanceExtremePoints()
+		self.getDiameterImagePlane()
 		self.getAngleFromFocus()
+		
 		self.getDistanceLandingMarkerFromFocus()
-
-
+		self.getHeightDistanceFromFocus()
+		
+		self.loadSurfaceCoeff()
+		self.getMomentFromEquation()
+		self.getMomentFromImage()
+		# self.loadHuMomentsToBuffer()
 		# self.showExtremePoints()
 
 	def getExtremePoints(self):
@@ -148,16 +164,6 @@ class LandingModule:
 		self.heightFromMarker = self.zDome* np.sin(self.alpha)
 		self.distanceFromMarker = self.zDome* np.cos(self.alpha)
 
-	def getMomentFromImage(self):
-		"""
-		Compute Hu Moments for binary image
-		"""
-		moments = cv2.moments(self.mask)
-		self.HuMomentsFromImage = cv2.HuMoments(moments)
-		
-		# Pick only the first 4 Moments
-		self.HuMomentsFromImage = self.HuMomentsFromImage[1:4]
-
 	def showImage(self):
 		"""
 		Show image obtained on topic
@@ -170,7 +176,7 @@ class LandingModule:
 		Function to define source of image for Hu Moment extraction	
 		"""
 		if topic == 'default':
-			self.image = cv2.imread('/home/fatguru/catkin_ws/src/btp/raw_data/image/20200427-164100/20200427-164717.jpg')
+			self.image = cv2.imread('/home/fatguru/catkin_ws/src/btp/raw_data/image/20200427-164100/20200427-165008.jpg')
 		elif topic == 'ROS':
 			self.image = self.sub_image
 
@@ -182,13 +188,12 @@ class LandingModule:
 		np_arr = np.fromstring(ros_data.data, np.uint8).reshape(ros_data.height, ros_data.width, 3)
 		raw = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 		self.sub_image = np_arr
-	
 
 	def loadSurfaceCoeff(self):
 		"""
 		Load coefficients of least squares surface obtained
 		"""
-		self.surface_coeff = np.loadtxt('/home/fatguru/catkin_ws/src/btp/learned_moments/', delimiter=',')
+		self.surface_coeff = np.loadtxt('/home/fatguru/catkin_ws/src/btp/learned_moments/20200515-145019', delimiter=',')
 
 	def getMomentFromEquation(self):
 		"""
@@ -200,7 +205,61 @@ class LandingModule:
 		x1_square = x1**2
 		x0_x1 = x0*x1
 		vec = np.array([[x0, x1, x0_square, x1_square, x0_x1, 1]])
-		self.HuMomentsFromEquation = np.dot(vec, self.surface_coeff)
+		self.HuMomentsFromEquation = np.dot(vec, self.surface_coeff).T
+		
+		# print "Equation", self.HuMomentsFromEquation.shape
+		# print self.HuMomentsFromEquation
+
+	def getMomentFromImage(self):
+		"""
+		Compute Hu Moments for binary image
+		"""
+		moments = cv2.moments(self.mask)
+		self.HuMomentsFromImage = cv2.HuMoments(moments)
+		
+		# Pick only the first 4 Moments
+		self.HuMomentsFromImage = self.HuMomentsFromImage[0:4]
+		
+		# print "Image", self.HuMomentsFromImage.shape
+		# print self.HuMomentsFromImage	
+
+	def loadHuMomentsToBuffer(self):
+		if self.HuMomentsFromEquationBuffer == None:
+			self.HuMomentsFromEquationBuffer = self.HuMomentsFromEquation
+		else:
+			self.HuMomentsFromEquationBuffer = np.append(self.HuMomentsFromEquation, self.HuMomentsFromEquationBuffer, axis = 1)
+		
+		if self.HuMomentsFromEquationBuffer.shape[1] > self.bufferLength
+			self.HuMomentsFromEquationBuffer = np.delete(self.HuMomentsFromEquationBuffer, self.bufferLength - 1, 1)
+
+		if self.HuMomentsFromImageBuffer == None:
+			self.HuMomentsFromImageBuffer = self.HuMomentsFromImage
+		else:
+			self.HuMomentsFromImageBuffer = np.append(self.HuMomentsFromImage, self.HuMomentsFromImageBuffer, axis = 1)
+		
+		if self.HuMomentsFromImageBuffer.shape[1] > self.bufferLength
+			self.HuMomentsFromImageBuffer = np.delete(self.HuMomentsFromImageBuffer, self.bufferLength - 1, 1)
+
+	def getMeanAndStandardDeviation(self):
+		
+		self.HuImageMean = np.mean(self.HuMomentsFromImageBuffer, axis=1)
+		self.HuImageStdDeviation = np.std(self.HuMomentsFromImageBuffer, axis=1)
+
+		self.HuEquationMean = np.mean(self.HuMomentsFromEquationBuffer, axis=1)
+		self.HuEquationStdDeviation = np.std(self.HuMomentsFromEquationBuffer, axis=1)
+
+	def confirmDome(self):
+
+		# lowerLimit = (0.9* HuEquationMean) 
+		# upperLimit = (1.1* HuEquationMean) 
+		lowerLimit = (0.9* HuEquationMean) - (self.HuImageStdDeviation / 2)
+		upperLimit = (1.1* HuEquationMean) + (self.HuImageStdDeviation / 2)
+
+		if ((self.HuImageMean >= lowerLimit).all() and (self.HuImageMean <= upperLimit).all()):
+			self.confirmation = True
+			print "Dome Confirmed, Landing Command can be issued."
+		else:
+			self.confirmation = False
 
 def main():
 	"""
