@@ -30,9 +30,9 @@ import imutils
 import numpy as np 
 import sensor_msgs
 from math import copysign, log10
+from btp.srv import identifyDome
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped
-
 
 class LandingModule:
 	def __init__(self):
@@ -45,8 +45,10 @@ class LandingModule:
 		Outline general flow of script
 		"""
 		rospy.init_node('landing_node')
-		self.image_subscriber = rospy.Subscriber("/iris/tiltCam/image_raw/imagestream", Image, self.img_callback)
-		
+		self.pose_subscriber = rospy.Subscriber("/mavros/local_position/pose", PoseStamped, self.poseCallback)
+		self.image_subscriber = rospy.Subscriber("/iris/tiltCam/image_raw/imagestream", Image, self.imgCallback)
+		self.identification_service = rospy.Service("landing_marker_identification_service", identifyDome, self.identifyLandingMarker)
+
 		self.diameter = 4.00
 		self.HSV_min = np.array([0, 128, 95])
 		self.HSV_max = np.array([179, 255, 136])
@@ -64,32 +66,50 @@ class LandingModule:
 		self.bufferLength = 4
 		self.HuMomentsFromImageBuffer = None
 		self.HuMomentsFromEquationBuffer = None
-		self.processImage()
+		
+		self.stack = []
+		self.current_pose = np.array([0,0,0])
+		# self.processImage()
+
+	def identifyLandingMarker(self, data):
+		if data.request == 'identify':
+			rospy.loginfo("verification of landing marker in progress")
+			self.processImage()
+			return "Service callback for identification has ended"
+		elif data.request =='save':
+			rospy.loginfo("request to save data")
+			return self.saveStack()
+		return "Invalid data request, service callback has ended"
 
 	def processImage(self):
 		"""
 		All Image Processing and Data Collection and Matching is done here.
 		"""
-		self.sourceImage()
+		self.sourceImage('ROS')
 
 		self.getHSVmask()
 		self.getExtremePoints()
-
-		self.getCentrePoint()
-		self.getDistanceExtremePoints()
-		self.getDiameterImagePlane()
-		self.getAngleFromFocus()
 		
-		self.getDistanceLandingMarkerFromFocus()
-		self.getHeightDistanceFromFocus()
-		self.correctForCameraOrientation()
-		self.loadSurfaceCoeff()
-		self.getMomentFromEquation()
-		self.getMomentFromImage()
-		self.loadHuMomentsToBuffer()
-		self.getMeanAndStandardDeviation()
-		self.confirmDome()
-		self.showExtremePoints()
+		if self.extExists:
+			self.getCentrePoint()
+			self.getDistanceExtremePoints()
+			self.getDiameterImagePlane()
+			self.getAngleFromFocus()
+			
+			self.getDistanceLandingMarkerFromFocus()
+			self.getHeightDistanceFromFocus()
+			self.correctForCameraOrientation()
+			self.loadSurfaceCoeff()
+			self.getMomentFromEquation()
+			self.getMomentFromImage()
+			self.loadHuMomentsToBuffer()
+			self.getMeanAndStandardDeviation()
+			self.confirmDome()
+			self.stackData()
+			# self.showExtremePoints()
+			return "Image Processed"
+		else:
+			return "No Contour Found"
 
 	def sourceImage(self, topic='default'):
 		"""
@@ -119,19 +139,23 @@ class LandingModule:
 		thresh = self.mask
 		cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		cnts = imutils.grab_contours(cnts)
-		c = max(cnts, key=cv2.contourArea)
-
- 		self.extMin = tuple(c[c[:, :, 0].argmin()][0])	
- 		self.extMax = tuple(c[c[:, :, 0].argmax()][0])
-		print "Min Extreme Point:", self.extMin
-		print "Max Extreme Point:", self.extMax
+		if cnts:
+			c = max(cnts, key=cv2.contourArea)
+	 		self.extMin = tuple(c[c[:, :, 0].argmin()][0])	
+	 		self.extMax = tuple(c[c[:, :, 0].argmax()][0])
+	 		self.extExists = True
+			print "Min Extreme Point:", self.extMin
+			print "Max Extreme Point:", self.extMax
+		else:
+			self.extExists = False
 
 	def showExtremePoints(self):	
  		"""
  		To visualize the obtained extremum points(Image)
  		"""
- 		cv2.circle(self.image, self.extMin, 8, (0, 0, 255), -1)
- 		cv2.circle(self.image, self.extMax, 8, (0, 255, 0), -1)
+ 		if self.extExists:
+ 			cv2.circle(self.image, self.extMin, 8, (0, 0, 255), -1)
+ 			cv2.circle(self.image, self.extMax, 8, (0, 255, 0), -1)
 		self.showImage()
 
 	def getCentrePoint(self):
@@ -296,8 +320,23 @@ class LandingModule:
 		
 		self.HuImageMean = np.mean(self.HuMomentsFromImageBuffer, axis=1)
 		self.HuImageStdDeviation = np.std(self.HuMomentsFromImageBuffer, axis=1)
+
 		self.HuEquationMean = np.mean(self.HuMomentsFromEquationBuffer, axis=1)
 		self.HuEquationStdDeviation = np.std(self.HuMomentsFromEquationBuffer, axis=1)
+
+		print ""
+		print "Mean from Image", self.HuImageMean.shape
+		print self.HuImageMean
+		print "Std Deviation Image", self.HuImageStdDeviation.shape
+		print self.HuImageStdDeviation
+		print ""
+
+		print ""
+		print "Mean from Equation", self.HuEquationMean.shape
+		print self.HuEquationMean
+		print "Std Deviation Equation", self.HuEquationStdDeviation.shape
+		print self.HuEquationStdDeviation
+		print ""
 
 	def confirmDome(self):
 
@@ -306,13 +345,72 @@ class LandingModule:
 		lowerLimit = (0.9* self.HuEquationMean) - (self.HuImageStdDeviation / 2)
 		upperLimit = (1.1* self.HuEquationMean) + (self.HuImageStdDeviation / 2)
 
+		print "Lower Limit:", lowerLimit
+		print "Upper Limit:", upperLimit
+
 		if ((self.HuImageMean >= lowerLimit).all() and (self.HuImageMean <= upperLimit).all()):
 			self.confirmation = True
 			print "Dome Confirmed, Landing Command can be issued."
 		else:
 			self.confirmation = False
 
-	def img_callback(self, ros_data):
+	def stackData(self):
+		a = np.ravel([
+			self.current_pose[0], 
+			self.current_pose[2], 
+			self.distanceFromMarker, 
+			self.heightFromMarker,
+
+			self.HuMomentsFromEquation[0],
+			self.HuMomentsFromImage[0],
+			self.HuImageMean[0],
+			self.HuImageStdDeviation[0],
+			self.HuEquationMean[0],
+			self.HuEquationStdDeviation[0],
+
+			self.HuMomentsFromEquation[0],
+			self.HuMomentsFromImage[0],
+			self.HuImageMean[0],
+			self.HuImageStdDeviation[0],
+			self.HuEquationMean[0],
+			self.HuEquationStdDeviation[0],
+
+			self.HuMomentsFromEquation[0],
+			self.HuMomentsFromImage[0],
+			self.HuImageMean[0],
+			self.HuImageStdDeviation[0],
+			self.HuEquationMean[0],
+			self.HuEquationStdDeviation[0],
+
+			self.HuMomentsFromEquation[0],
+			self.HuMomentsFromImage[0],
+			self.HuImageMean[0],
+			self.HuImageStdDeviation[0],
+			self.HuEquationMean[0],
+			self.HuEquationStdDeviation[0],
+
+			]).reshape(1, 28)
+		if self.stack:
+			self.stack = np.concatenate((self.stack, a), axis = 0)
+		else:
+			self.stack = a
+
+	def saveStack(self):
+		"""
+		Method to save stacked data
+		"""
+		filename = time.strftime("%Y%m%d-%H%M%S")
+		filepath = '/home/fatguru/catkin_ws/src/btp/landing/' + filename
+		# rospy.loginfo("Saving surface data file to Path:%s"%filepath)
+		if self.stack:
+			print "Saving Landing data file to Path:%s"%filepath		
+			np.savetxt(filepath, self.stack, delimiter=',')
+			print "Size of saved stack:", self.stack.shape
+			return "Save Successful"
+		else:
+			print "Save Failed: No Data"
+			return "Save Failed: No Data"
+	def imgCallback(self, ros_data):
 		"""
 		Callback for image_Subcriber topic
 		Saves topic image at self.sub_image
@@ -321,18 +419,32 @@ class LandingModule:
 		raw = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 		self.sub_image = np_arr
 
+	def poseCallback(self, data):
+		"""
+		Callback for local drone position topic
+		Stores pose in private data structure
+		TODO:
+		1] Origin of reference frame of data is Home of Drone
+		2] Need to modify so that position is wrt Landing Marker, whose position is defined in temp.world 
+		"""
+		self.current_pose[0] = data.pose.position.x
+		self.current_pose[1] = data.pose.position.y
+		self.current_pose[2] = data.pose.position.z
+
 	def showImage(self):
 		"""
 		Show image obtained on topic
 		"""
 		cv2.imshow('image', self.image)
 		cv2.waitKey(0)
+		cv2.destroyAllWindows()
 
 def main():
 	"""
 	Main Function
 	"""
 	instance = LandingModule()
+	rospy.spin()
 
 if __name__ == '__main__':
 	main()

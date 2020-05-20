@@ -62,6 +62,7 @@ add_service_files(
   # Service2.srv
   cherry.srv
   snap.srv
+  identifyDome.srv
 )
 
 ## Generate actions in the 'action' folder

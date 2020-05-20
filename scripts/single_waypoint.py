@@ -43,6 +43,7 @@ from mavros_msgs.msg import *
 from mavros_msgs.srv import *
 from btp.srv import snap
 from btp.srv import cherry
+from btp.srv import identifyDome
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped
@@ -122,21 +123,29 @@ class mission_sitl:
 		]
 
 		self.setpoint = PoseStamped()
+		self.identifyLandingMarker()
 		self.setMode('GUIDED')
 		
 		rospy.sleep(1)
-		
+		self.phase = 2
 		self.setArm()
 		self.setTakeOff(15)
 		rospy.sleep(15)
+		
 		for i in range(len(self.setpoint_list)):
 			self.update_setpoint(self.setpoint, i)
 			rospy.sleep(7)
-			self.captureImage()
+			if self.phase == 1:
+				self.captureImage() #Use only for Phase 1 of Mission
+			elif self.phase == 2:
+				self.identifyLandingMarker()
 			rospy.sleep(3)
 
 		self.setMode('RTL')
-		self.saveData()
+		if self.phase == 1:
+			self.saveData() #Use only for Phase 1 of Mission
+		elif self.phase == 2:
+			self.saveLandingMarkerData()
 
 	def update_setpoint(self, setpoint, index):
 		"""
@@ -205,6 +214,26 @@ class mission_sitl:
 			response = captureService(action = 1)
 		except rospy.ServiceException, e:
 			rospy.logerr("HuMoment Service call failed")
+
+	def identifyLandingMarker(self):
+		rospy.wait_for_service('/landing_marker_identification_service')
+		rospy.loginfo("Attempting to identify landing marker from current position")
+		try:
+			isDome = rospy.ServiceProxy('/landing_marker_identification_service', identifyDome)
+			response = isDome(request='identify')
+			print response
+		except rospy.ServiceException, e:
+			rospy.logerr("Service call to identify landing marker failed")
+
+	def saveLandingMarkerData(self):
+		rospy.wait_for_service('/landing_marker_identification_service')
+		rospy.loginfo("Attempting to save landing marker data")
+		try:
+			isDome = rospy.ServiceProxy('/landing_marker_identification_service', identifyDome)
+			response = isDome(request='saveData')
+			print response
+		except rospy.ServiceException, e:
+			rospy.logerr("Service call to save landing marker data failed")
 
 	def saveData(self):
 		"""
