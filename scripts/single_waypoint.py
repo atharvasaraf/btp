@@ -127,6 +127,7 @@ class mission_sitl:
 		self.setMode('GUIDED')
 		
 		rospy.sleep(1)
+		# Set phase to 1 for Dome Characterization and to 2 for Dome Confirmation
 		self.phase = 2
 		self.setArm()
 		self.setTakeOff(15)
@@ -230,7 +231,7 @@ class mission_sitl:
 		rospy.loginfo("Attempting to save landing marker data")
 		try:
 			isDome = rospy.ServiceProxy('/landing_marker_identification_service', identifyDome)
-			response = isDome(request='saveData')
+			response = isDome(request='save')
 			print response
 		except rospy.ServiceException, e:
 			rospy.logerr("Service call to save landing marker data failed")

@@ -64,8 +64,8 @@ class LandingModule:
 		self.camera_tilt = 0.4 #Enter the downward tilt of the camera in radians
 
 		self.bufferLength = 4
-		self.HuMomentsFromImageBuffer = None
-		self.HuMomentsFromEquationBuffer = None
+		self.HuMomentsFromImageBuffer = []
+		self.HuMomentsFromEquationBuffer = []
 		
 		self.stack = []
 		self.current_pose = np.array([0,0,0])
@@ -290,7 +290,7 @@ class LandingModule:
 		print ""
 	
 	def loadHuMomentsToBuffer(self):
-		if self.HuMomentsFromEquationBuffer == None:
+		if self.HuMomentsFromEquationBuffer == []:
 			self.HuMomentsFromEquationBuffer = self.HuMomentsFromEquation
 		else:
 			self.HuMomentsFromEquationBuffer = np.append(self.HuMomentsFromEquation, self.HuMomentsFromEquationBuffer, axis = 1)
@@ -298,7 +298,7 @@ class LandingModule:
 		if self.HuMomentsFromEquationBuffer.shape[1] > self.bufferLength:
 			self.HuMomentsFromEquationBuffer = np.delete(self.HuMomentsFromEquationBuffer, self.bufferLength - 1, 1)
 
-		if self.HuMomentsFromImageBuffer == None:
+		if self.HuMomentsFromImageBuffer == []:
 			self.HuMomentsFromImageBuffer = self.HuMomentsFromImage
 		else:
 			self.HuMomentsFromImageBuffer = np.append(self.HuMomentsFromImage, self.HuMomentsFromImageBuffer, axis = 1)
@@ -352,6 +352,7 @@ class LandingModule:
 			self.confirmation = True
 			print "Dome Confirmed, Landing Command can be issued."
 		else:
+			print "Dome not confirmed, Cannot land"
 			self.confirmation = False
 
 	def stackData(self):
@@ -368,32 +369,34 @@ class LandingModule:
 			self.HuEquationMean[0],
 			self.HuEquationStdDeviation[0],
 
-			self.HuMomentsFromEquation[0],
-			self.HuMomentsFromImage[0],
-			self.HuImageMean[0],
-			self.HuImageStdDeviation[0],
-			self.HuEquationMean[0],
-			self.HuEquationStdDeviation[0],
+			self.HuMomentsFromEquation[1],
+			self.HuMomentsFromImage[1],
+			self.HuImageMean[1],
+			self.HuImageStdDeviation[1],
+			self.HuEquationMean[1],
+			self.HuEquationStdDeviation[1],
 
-			self.HuMomentsFromEquation[0],
-			self.HuMomentsFromImage[0],
-			self.HuImageMean[0],
-			self.HuImageStdDeviation[0],
-			self.HuEquationMean[0],
-			self.HuEquationStdDeviation[0],
+			self.HuMomentsFromEquation[2],
+			self.HuMomentsFromImage[2],
+			self.HuImageMean[2],
+			self.HuImageStdDeviation[2],
+			self.HuEquationMean[2],
+			self.HuEquationStdDeviation[2],
 
-			self.HuMomentsFromEquation[0],
-			self.HuMomentsFromImage[0],
-			self.HuImageMean[0],
-			self.HuImageStdDeviation[0],
-			self.HuEquationMean[0],
-			self.HuEquationStdDeviation[0],
-
+			self.HuMomentsFromEquation[3],
+			self.HuMomentsFromImage[3],
+			self.HuImageMean[3],
+			self.HuImageStdDeviation[3],
+			self.HuEquationMean[3],
+			self.HuEquationStdDeviation[3],
 			]).reshape(1, 28)
-		if self.stack:
-			self.stack = np.concatenate((self.stack, a), axis = 0)
-		else:
+		# print "Stack"
+		# print self.stack
+		# print ""
+		if self.stack == []:
 			self.stack = a
+		else:
+			self.stack = np.concatenate((self.stack, a), axis = 0)
 
 	def saveStack(self):
 		"""
@@ -402,7 +405,7 @@ class LandingModule:
 		filename = time.strftime("%Y%m%d-%H%M%S")
 		filepath = '/home/fatguru/catkin_ws/src/btp/landing/' + filename
 		# rospy.loginfo("Saving surface data file to Path:%s"%filepath)
-		if self.stack:
+		if self.stack != []:
 			print "Saving Landing data file to Path:%s"%filepath		
 			np.savetxt(filepath, self.stack, delimiter=',')
 			print "Size of saved stack:", self.stack.shape
@@ -410,6 +413,7 @@ class LandingModule:
 		else:
 			print "Save Failed: No Data"
 			return "Save Failed: No Data"
+	
 	def imgCallback(self, ros_data):
 		"""
 		Callback for image_Subcriber topic

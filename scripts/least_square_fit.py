@@ -9,6 +9,7 @@ import math
 import numpy as np 
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+import matplotlib.patches as mpl_patches
 from scipy.optimize import least_squares
 
 class fitData:
@@ -38,7 +39,8 @@ class fitData:
 		print th
 
 	def correctOrientation(self):
-		self.x_raw = self.initial_distance_from_drone - self.x_raw
+		self.x_raw = self.x_raw + 40
+		# self.x_raw = self.initial_distance_from_drone - self.x_raw
 		# self.camera_tilt = 0.4
 		# cx = math.cos(self.camera_tilt)
 		# sx = math.sin(self.camera_tilt)
@@ -81,7 +83,8 @@ class fitData:
 			self.hu4 =  self.hu4 / norm
 
 	def loadData(self):
-		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200427-170305', delimiter=',')
+		self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/20200427-170305', delimiter=',')		
+		# self.raw_data = np.loadtxt('/home/fatguru/catkin_ws/src/btp/data/archives/20200405-155710', delimiter=',')
 		self.raw_data = self.raw_data[:][:] # Latest data generated with self.raw_data[0:31][:]
 		self.x_raw, self.y_raw, self.z_raw, self.hu1, self.hu2, self.hu3, self.hu4, self.hu5, self.hu6, self.hu7 = np.hsplit(self.raw_data, np.array([1,2,3,4,5,6,7,8,9]))
 	
@@ -166,21 +169,32 @@ class fitData:
 		ax.plot_surface(X, Y, z0_temp, cmap='viridis', edgecolor='none')
 		ax.scatter(self.x0, self.x1, self.augY[:, 0], marker='^', color='r')
 		ax.set_title('Hu1')
+		ax.set_xlabel('X', fontweight='extra bold')
+		ax.set_ylabel('Y', fontweight='extra bold')
+
 
 		ax = fig.add_subplot(2,2,2,projection = '3d')
 		ax.plot_surface(X, Y, z1_temp, cmap='viridis', edgecolor='none')
 		ax.scatter(self.x0, self.x1, self.augY[:, 1], marker='^', color='r')
 		ax.set_title('Hu2')
+		ax.set_xlabel('X', fontweight='extra bold')
+		ax.set_ylabel('Y', fontweight='extra bold')
 
 		ax = fig.add_subplot(2,2,3,projection = '3d')
 		ax.plot_surface(X, Y, z2_temp, cmap='viridis', edgecolor='none')
 		ax.scatter(self.x0, self.x1, self.augY[:, 2], marker='^', color='r')
 		ax.set_title('Hu3')
+		ax.set_xlabel('X', fontweight='extra bold')
+		ax.set_ylabel('Y', fontweight='extra bold')
 
 		ax = fig.add_subplot(2,2,4,projection = '3d')
 		ax.plot_surface(X, Y, z3_temp, cmap='viridis', edgecolor='none')
 		ax.scatter(self.x0, self.x1, self.augY[:, 3], marker='^', color='r')
 		ax.set_title('Hu4')
+		ax.set_xlabel('X', fontweight='extra bold')
+		ax.set_ylabel('Y', fontweight='extra bold')
+
+
 		plt.show()
 
 	def requestSaveData(self):
